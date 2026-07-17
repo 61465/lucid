@@ -1,0 +1,52 @@
+# ─── Python ──────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+
+# ─── Testing / linting ───────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# ─── Virtual envs ────────────────────────────
+.venv/
+venv/
+env/
+.python-version
+
+# ─── OS ──────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Editors ─────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── LucidCode runtime artifacts ─────────────
+logs/
+tests/regression/REPORT.md
+benchmarks/RESULT.md
+
+# ─── Session junk (not part of the package) ──
+*.ndjson
+comp_samples/
+"Z.ai"*.html
+"Z.ai"*_files/
+*.pdf
+*.html
+!landing/index.html
+
+# Legacy v1-v3 prototypes kept on disk locally but not tracked in git.
+archive/

@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lucidcode"
+version = "0.4.0"
+description = "Python code that confesses its own missing needs — validated by a 3-engine anti-hallucination ensemble."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "LucidCode contributors" }]
+requires-python = ">=3.10"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Software Development :: Testing",
+  "Topic :: Security",
+]
+dependencies = [
+  "click>=8.1",
+]
+
+[project.optional-dependencies]
+llm = ["openai>=1.0", "requests>=2.31"]
+dev = ["pytest>=7.4"]
+
+[project.urls]
+Homepage = "https://lucidcode.dev"
+Repository = "https://github.com/lucidcode/lucid"
+Documentation = "https://lucidcode.dev"
+
+[project.scripts]
+lucid = "lucidcode.cli:cli"
+
+[tool.setuptools.packages.find]
+include = ["lucidcode*"]
+exclude = ["tests*", "benchmarks*", "landing*", "launch*", "docs*"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-q"
+testpaths = ["tests"]
