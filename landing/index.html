@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LucidCode — It doesn't find bugs. It compels the truth.</title>
+<meta name="description" content="LucidCode grants your code cognitive self-awareness. Instead of scanning for bugs, it makes code confess its missing needs in first person — verified by a 3-engine anti-hallucination ensemble.">
+<style>
+  :root{
+    --bg:#0A0A0A; --panel:#111; --border:#333; --gold:#D4AF37;
+    --gold-dim:#8a7328; --text:#ccc; --dim:#666; --red:#c46060; --amber:#d1a13e;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;line-height:1.6;}
+  a{color:var(--gold);text-decoration:none;}
+  a:hover{opacity:.8;}
+  h1,h2,h3,pre,code{font-family:'Courier New',ui-monospace,monospace;}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px;}
+
+  /* NAV */
+  nav{padding:22px 0;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
+  nav .logo{font-family:'Courier New',monospace;font-size:20px;letter-spacing:6px;color:var(--gold);}
+  nav ul{list-style:none;display:flex;gap:26px;}
+  nav ul a{color:var(--text);font-size:14px;}
+
+  /* HERO */
+  .hero{display:grid;grid-template-columns:1fr 1fr;gap:60px;padding:90px 0 70px;align-items:center;}
+  .hero h1{font-size:2.9rem;line-height:1.1;color:#f2e6bc;letter-spacing:-.5px;margin-bottom:22px;}
+  .hero p.lead{font-size:1.1rem;max-width:520px;margin-bottom:32px;}
+  .cta{display:flex;gap:14px;flex-wrap:wrap;}
+  .btn{display:inline-block;padding:14px 26px;font-family:'Courier New',monospace;font-size:14px;letter-spacing:2px;border-radius:4px;cursor:pointer;text-transform:uppercase;}
+  .btn.primary{background:var(--gold);color:#0A0A0A;border:1px solid var(--gold);font-weight:700;}
+  .btn.primary:hover{background:transparent;color:var(--gold);}
+  .btn.ghost{background:transparent;color:var(--gold);border:1px solid var(--gold);}
+  .btn.ghost:hover{background:rgba(212,175,55,.08);}
+
+  /* TERMINAL MOCKUP */
+  .term{background:#0e0e0e;border:1px solid var(--border);border-radius:8px;box-shadow:0 0 30px rgba(212,175,55,.06);overflow:hidden;}
+  .term-head{background:#181818;padding:10px 14px;display:flex;gap:8px;border-bottom:1px solid var(--border);}
+  .term-head span{width:12px;height:12px;border-radius:50%;background:#3a3a3a;}
+  .term-head .r{background:#ff5f56;} .term-head .y{background:#ffbd2e;} .term-head .g{background:#27c93f;}
+  .term-body{padding:20px;font-family:'Courier New',ui-monospace,monospace;font-size:13.5px;color:#e0e0e0;min-height:290px;}
+  .term-body .sys{color:var(--dim);}
+  .term-body .id{color:#7ec1ff;}
+  .term-body .syn{color:var(--gold);}
+  .term-body .conf{color:#f2e6bc;}
+  .term-body .verdict-truth{color:#8fff9a;}
+  .term-body .verdict-likely{color:var(--amber);}
+  .cursor{display:inline-block;width:8px;height:14px;background:var(--gold);vertical-align:middle;animation:blink 1s steps(2) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  /* SECTIONS */
+  section{padding:80px 0;border-top:1px solid var(--border);}
+  section h2{font-size:2rem;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:38px;text-align:center;}
+
+  /* 3-STEP */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;}
+  .step{background:var(--panel);border:1px solid var(--border);padding:28px;border-radius:8px;}
+  .step .num{color:var(--gold);font-family:'Courier New',monospace;font-size:.85rem;letter-spacing:3px;margin-bottom:12px;}
+  .step h3{color:#f2e6bc;font-size:1.25rem;margin-bottom:12px;}
+
+  /* COMPARISON */
+  .cmp{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th,td{padding:14px;border-bottom:1px solid var(--border);text-align:left;}
+  th{color:var(--gold);font-family:'Courier New',monospace;letter-spacing:1px;font-weight:400;text-transform:uppercase;font-size:12px;}
+  td.win{color:#f2e6bc;font-weight:600;background:rgba(212,175,55,.05);}
+  td.no{color:var(--dim);}
+
+  /* PRICING */
+  .price{display:grid;grid-template-columns:1fr 1fr;gap:26px;max-width:820px;margin:0 auto;}
+  .plan{background:var(--panel);border:1px solid var(--border);padding:32px;border-radius:8px;}
+  .plan.pro{border-color:var(--gold);box-shadow:0 0 30px rgba(212,175,55,.08);}
+  .plan h3{color:var(--gold);font-size:1.4rem;margin-bottom:6px;letter-spacing:2px;}
+  .plan .amt{font-family:'Courier New',monospace;font-size:2rem;color:#f2e6bc;margin-bottom:18px;}
+  .plan ul{list-style:none;}
+  .plan li{padding:6px 0;color:var(--text);font-size:14px;}
+  .plan li::before{content:"›  ";color:var(--gold);}
+
+  /* FOOTER */
+  footer{padding:40px 0;text-align:center;color:var(--dim);font-size:13px;border-top:1px solid var(--border);}
+  footer a{margin:0 14px;}
+
+  @media(max-width:820px){
+    .hero{grid-template-columns:1fr;padding:60px 0;}
+    .hero h1{font-size:2.1rem;}
+    .steps,.price{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav>
+    <div class="logo">L U C I D</div>
+    <ul>
+      <li><a href="#how">How</a></li>
+      <li><a href="#compare">Compare</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="https://github.com/lucidcode/lucid" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero" style="border-top:none;padding-top:70px;">
+    <div>
+      <h1>Your code has been hiding things from you.</h1>
+      <p class="lead">LucidCode makes it confess — in first person — verified by a 3-engine anti-hallucination ensemble. Deterministic AST re-verifier, sandboxed fuzzer, adversarial LLM devil. Every claim anchored, every hallucination rejected.</p>
+      <div class="cta">
+        <a class="btn primary" href="#pricing">Get LucidCode (Free)</a>
+        <a class="btn ghost" href="#how">Watch 60s demo</a>
+      </div>
+    </div>
+    <div class="term">
+      <div class="term-head"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <div class="term-body" id="term"><span class="cursor"></span></div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="num">01 — DETECT</div>
+        <h3>Twelve psychiatric syndromes</h3>
+        <p>An AST Surgeon scans for Suppression, Amnesia, Despair, Insomnia, Hoarding, Deafness, Selective_Mutism, and more. Deterministic. Line-anchored. Zero LLM in this step.</p>
+      </div>
+      <div class="step">
+        <div class="num">02 — CONFESS</div>
+        <h3>Code speaks in first person</h3>
+        <p>An LLM voices each trauma as the code itself: <em>"I confessed at line 6: I called out without a clock. I hang forever if the server stalls."</em></p>
+      </div>
+      <div class="step">
+        <div class="num">03 — VERIFY</div>
+        <h3>Three engines vote</h3>
+        <p>A deterministic AST re-verifier (0.90 trust), a sandboxed fuzzer (0.70), and a diversified LLM devil (0.40) vote in parallel. Bayesian aggregation produces a calibrated verdict. Hallucinations are logged and never shown.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARISON -->
+  <section id="compare">
+    <h2>Why it's different</h2>
+    <div class="cmp">
+      <table>
+        <thead>
+          <tr><th></th><th>LucidCode</th><th>Semgrep</th><th>Copilot</th><th>CriticGPT</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Approach</td>
+            <td class="win">Confession + ensemble</td>
+            <td class="no">Static rule match</td>
+            <td class="no">Autocomplete</td>
+            <td class="no">Self-critique</td>
+          </tr>
+          <tr>
+            <td>Anti-hallucination</td>
+            <td class="win">Diverse 3-engine</td>
+            <td class="no">n/a</td>
+            <td class="no">n/a</td>
+            <td class="no">Single LLM</td>
+          </tr>
+          <tr>
+            <td>Output style</td>
+            <td class="win">First-person confession</td>
+            <td class="no">Rule ID + line</td>
+            <td class="no">Code suggestion</td>
+            <td class="no">Chat critique</td>
+          </tr>
+          <tr>
+            <td>Runs offline</td>
+            <td class="win">Yes (subprocess mode)</td>
+            <td class="no">Partial</td>
+            <td class="no">No</td>
+            <td class="no">No</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing">
+    <h2>Pricing</h2>
+    <div class="price">
+      <div class="plan">
+        <h3>Free · OSS</h3>
+        <div class="amt">$0</div>
+        <ul>
+          <li>CLI (`lucid analyze`)</li>
+          <li>SARIF export → CI gate</li>
+          <li>12 syndromes, Python + subprocess sandbox</li>
+          <li>Prompt-injection shield</li>
+          <li>MIT-licensed core</li>
+        </ul>
+      </div>
+      <div class="plan pro">
+        <h3>Pro · $9/mo</h3>
+        <div class="amt">$9</div>
+        <ul>
+          <li>Everything in Free</li>
+          <li>VS Code extension with inline confessions</li>
+          <li>Firecracker sandbox (isolated LLM harnesses)</li>
+          <li>Team dashboard + PR history</li>
+          <li>Priority support + private syndromes</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <a href="https://github.com/lucidcode/lucid" target="_blank" rel="noopener">GitHub</a>·
+    <a href="/docs/PRIOR_ART">Prior-Art audit</a>·
+    <a href="/docs/whitepaper">Whitepaper</a>·
+    <a href="https://discord.gg/lucidcode" target="_blank" rel="noopener">Discord</a>
+    <p style="margin-top:14px;">© 2026 LucidCode · It doesn't find bugs. It compels the truth.</p>
+  </footer>
+</div>
+
+<script>
+// animated confession stream
+const seq = [
+  {t:'sys', s:'[SYS] Sealing isolation chamber…'},
+  {t:'sys', s:'[SYS] Running surgical AST extraction…'},
+  {t:'id',  s:'[T1] '},
+  {t:'syn', s:'Suppression @ line 8'},
+  {t:'conf',s:'\n  › I confessed: I caught an exception and said nothing.\n     Every scream is muffled the moment it starts.\n     What am I hiding?'},
+  {t:'verdict-truth', s:'\n  [VERDICT: TRUTH]  posterior=0.95  driver=ast_reverifier'},
+  {t:'id',  s:'\n\n[T2] '},
+  {t:'syn', s:'Network_Blindspot @ line 6'},
+  {t:'conf',s:'\n  › I call http://api.example.com without a timeout.\n     If the server hangs, I wait forever.'},
+  {t:'verdict-likely', s:'\n  [VERDICT: LIKELY]  posterior=0.79  engines disagreed'},
+];
+
+const term = document.getElementById('term');
+async function stream(){
+  while(true){
+    term.innerHTML='';
+    for(const chunk of seq){
+      const span = document.createElement('span');
+      span.className = chunk.t;
+      term.appendChild(span);
+      for(const ch of chunk.s){
+        span.textContent += ch;
+        await new Promise(r=>setTimeout(r, 18));
+      }
+    }
+    const cur = document.createElement('span');
+    cur.className='cursor';
+    term.appendChild(cur);
+    await new Promise(r=>setTimeout(r, 2500));
+  }
+}
+stream();
+</script>
+</body>
+</html>
