@@ -32,7 +32,7 @@ dev = ["pytest>=7.4"]
 
 [project.urls]
 Homepage = "https://lucidcode.dev"
-Repository = "https://github.com/lucidcode/lucid"
+Repository = "https://github.com/61465/lucid"
 Documentation = "https://lucidcode.dev"
 
 [project.scripts]

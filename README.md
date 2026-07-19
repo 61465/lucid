@@ -34,7 +34,7 @@ Full survey of adjacent work in [`docs/PRIOR_ART.md`](docs/PRIOR_ART.md).
 
 ```bash
 pip install click
-git clone https://github.com/lucidcode/lucid
+git clone https://github.com/61465/lucid
 cd lucid
 python -m lucidcode.cli syndromes    # list registered syndromes
 ```

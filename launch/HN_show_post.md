@@ -23,6 +23,6 @@ MIT-licensed core, Python 3.10+, one dependency (`click`). Pro tier ($9/mo) with
 
 Would love feedback on the ensemble design, the syndrome taxonomy, and honest attempts to make it hallucinate.
 
-Repo: https://github.com/lucidcode/lucid
-Prior-art audit: https://github.com/lucidcode/lucid/blob/main/docs/PRIOR_ART.md
+Repo: https://github.com/61465/lucid
+Prior-art audit: https://github.com/61465/lucid/blob/main/docs/PRIOR_ART.md
 Benchmark: `python -m benchmarks.runner --markdown`

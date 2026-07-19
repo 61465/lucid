@@ -48,7 +48,7 @@ Free, MIT-licensed. Python 3.10+. One dep (`click`).
 
 CLI: `lucid analyze ./src --sarif out.sarif`
 Landing: lucidcode.dev
-GitHub: github.com/lucidcode/lucid
+GitHub: github.com/61465/lucid
 
 Pro tier ($9/mo) adds VS Code inline confessions + team dashboard.
 

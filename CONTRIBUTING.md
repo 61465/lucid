@@ -5,7 +5,7 @@ Thanks for your interest.
 ## Development setup
 
 ```bash
-git clone https://github.com/lucidcode/lucid
+git clone https://github.com/61465/lucid
 cd lucid
 pip install -e ".[dev]"
 ```

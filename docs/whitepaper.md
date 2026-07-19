@@ -214,7 +214,7 @@ LucidCode reframes code analysis as a dialogue. By granting code a synthetic fir
 
 *Reproduce every number in this paper with:*
 ```bash
-git clone https://github.com/lucidcode/lucid
+git clone https://github.com/61465/lucid
 pip install click
 python -m benchmarks.runner --markdown > RESULT.md
 ```
