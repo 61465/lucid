@@ -1,0 +1,10 @@
+{
+  "fixture": "network_neg.py",
+  "syndrome": "Network_Blindspot",
+  "expect": [
+    {
+      "line": 3,
+      "should_detect": false
+    }
+  ]
+}

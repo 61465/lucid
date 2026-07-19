@@ -1,0 +1,10 @@
+{
+  "fixture": "split_personality_pos.py",
+  "syndrome": "Split_Personality",
+  "expect": [
+    {
+      "line": 1,
+      "should_detect": true
+    }
+  ]
+}

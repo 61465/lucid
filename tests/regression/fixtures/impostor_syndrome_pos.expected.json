@@ -1,0 +1,10 @@
+{
+  "fixture": "impostor_syndrome_pos.py",
+  "syndrome": "Impostor_Syndrome",
+  "expect": [
+    {
+      "line": 2,
+      "should_detect": true
+    }
+  ]
+}

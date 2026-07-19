@@ -1,0 +1,10 @@
+{
+  "fixture": "compulsion_pos.py",
+  "syndrome": "Compulsion",
+  "expect": [
+    {
+      "line": 2,
+      "should_detect": true
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "fixture": "despair_pos.py",
+  "syndrome": "Despair",
+  "expect": [
+    {
+      "line": 2,
+      "should_detect": true
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "fixture": "deafness_pos.py",
+  "syndrome": "Deafness",
+  "expect": [
+    {
+      "line": 3,
+      "should_detect": true
+    }
+  ]
+}

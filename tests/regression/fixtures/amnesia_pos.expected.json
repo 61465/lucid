@@ -1,0 +1,10 @@
+{
+  "fixture": "amnesia_pos.py",
+  "syndrome": "Amnesia",
+  "expect": [
+    {
+      "line": 4,
+      "should_detect": true
+    }
+  ]
+}

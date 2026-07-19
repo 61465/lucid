@@ -1,0 +1,10 @@
+{
+  "fixture": "suppression_pos.py",
+  "syndrome": "Suppression",
+  "expect": [
+    {
+      "line": 4,
+      "should_detect": true
+    }
+  ]
+}

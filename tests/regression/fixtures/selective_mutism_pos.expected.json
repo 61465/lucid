@@ -1,0 +1,10 @@
+{
+  "fixture": "selective_mutism_pos.py",
+  "syndrome": "Selective_Mutism",
+  "expect": [
+    {
+      "line": 4,
+      "should_detect": true
+    }
+  ]
+}

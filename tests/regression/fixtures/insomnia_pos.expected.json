@@ -1,0 +1,10 @@
+{
+  "fixture": "insomnia_pos.py",
+  "syndrome": "Insomnia",
+  "expect": [
+    {
+      "line": 2,
+      "should_detect": true
+    }
+  ]
+}
