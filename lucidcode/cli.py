@@ -33,6 +33,13 @@ from lucidcode.pipeline import analyze, AnalysisResult
 from lucidcode.core.trauma import Verdict, ValidatedTrauma
 from lucidcode.syndromes import SYNDROMES
 
+try:
+    from lucidcode.lang import detect_language
+    _MULTILANG = True
+except ImportError:
+    _MULTILANG = False
+    detect_language = None
+
 
 __version__ = "0.4.0"
 
@@ -55,40 +62,60 @@ _VERDICT_ORDER = {v: i for i, v in enumerate(
 )}
 _SARIF_LEVEL = {"CRITICAL": "error", "HIGH": "error",
                 "MEDIUM": "warning", "LOW": "note"}
-_SKIP_DIRS = {".venv", ".git", "__pycache__", "node_modules", "dist", "build"}
+_SKIP_DIRS = {".venv", ".git", "__pycache__", "node_modules", "dist", "build",
+              ".pytest_cache", ".mypy_cache", ".ruff_cache", "archive",
+              ".idea", ".vscode", "coverage", "htmlcov"}
+_ANALYZABLE_SUFFIXES = {".py", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".go"}
 
 
 def _color(text: str, code: str, enable: bool) -> str:
     return f"{code}{text}{_ANSI_RESET}" if enable else text
 
 
-def _walk_py_files(root: Path):
+def _walk_source_files(root: Path):
     if root.is_file():
-        if root.suffix == ".py":
+        if root.suffix.lower() in _ANALYZABLE_SUFFIXES:
             yield root
         return
-    for p in root.rglob("*.py"):
+    for p in root.rglob("*"):
+        if not p.is_file():
+            continue
+        if p.suffix.lower() not in _ANALYZABLE_SUFFIXES:
+            continue
         if any(part in _SKIP_DIRS for part in p.parts):
             continue
         yield p
 
 
+def _language_for(path: Path) -> str:
+    """Pick language string for the pipeline based on file extension."""
+    ext = path.suffix.lower()
+    if ext in (".py", ".pyi"):
+        return "python"
+    if ext in (".ts", ".tsx"):
+        return "typescript"
+    if ext == ".go":
+        return "go"
+    return "javascript"
+
+
 def _analyze_target(path: Path | None, stdin: bool) -> list[tuple[Path, AnalysisResult]]:
     if stdin:
         src = sys.stdin.read()
-        return [(Path("<stdin>"), analyze(src))]
+        return [(Path("<stdin>"), analyze(src, language="python"))]
     if not path:
         raise click.UsageError("provide a PATH or use --stdin")
     if not path.exists():
         raise click.UsageError(f"path does not exist: {path}")
     results = []
-    for py in _walk_py_files(path):
+    for f in _walk_source_files(path):
         try:
-            src = py.read_text(encoding="utf-8", errors="replace")
+            src = f.read_text(encoding="utf-8", errors="replace")
         except Exception as e:
-            click.echo(f"[skip] {py}: {e}", err=True)
+            click.echo(f"[skip] {f}: {e}", err=True)
             continue
-        results.append((py, analyze(src)))
+        lang = _language_for(f)
+        results.append((f, analyze(src, language=lang)))
     return results
 
 

@@ -27,6 +27,12 @@ from .syndromes import detect_all
 from .validators import validate_trauma
 from .validators.base import Engine
 
+try:
+    from .lang import detect_all_multilang, detect_language
+    _MULTILANG = True
+except ImportError:
+    _MULTILANG = False
+
 
 REJECTION_LEDGER = Path(__file__).resolve().parent.parent / "logs" / "rejected_confessions.jsonl"
 
@@ -54,11 +60,12 @@ class AnalysisResult:
 
 
 def analyze(source: str, engines: list[Engine] | None = None,
-            log_rejections: bool = True) -> AnalysisResult:
+            log_rejections: bool = True,
+            language: str | None = None) -> AnalysisResult:
     t0 = time.time()
 
     # 1. shield
-    shield = sanitize_source(source)
+    shield = sanitize_source(source, language=language or "python")
     if not shield.ok:
         return AnalysisResult(
             ok=False,
@@ -72,8 +79,11 @@ def analyze(source: str, engines: list[Engine] | None = None,
 
     src = shield.sanitized
 
-    # 2. AST Surgeon
-    raw_hits = detect_all(src)
+    # 2. AST Surgeon (Python) or Tree-sitter multi-language
+    if language and language != "python" and _MULTILANG:
+        raw_hits = detect_all_multilang(src, language)
+    else:
+        raw_hits = detect_all(src)
 
     # 3-4. Validator + aggregator
     shown: list[ValidatedTrauma] = []

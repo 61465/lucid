@@ -28,6 +28,13 @@ dependencies = [
 
 [project.optional-dependencies]
 llm = ["openai>=1.0", "requests>=2.31"]
+multilang = [
+  "tree-sitter>=0.24",
+  "tree-sitter-python>=0.25",
+  "tree-sitter-javascript>=0.25",
+  "tree-sitter-typescript>=0.23",
+  "tree-sitter-go>=0.25",
+]
 dev = ["pytest>=7.4"]
 
 [project.urls]

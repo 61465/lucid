@@ -77,6 +77,26 @@ D:\project\doctor\
     └── REPORT.md                               ← auto-generated
 ```
 
+## Phase 2.2 · Data-flow Engine — 🟡 SCAFFOLD SHIPPED
+
+- `lucidcode/validators/dataflow.py` (146 LOC) wraps `codeql` CLI.
+- Degrades gracefully to `inconclusive` when the binary is missing (current default).
+- Ready for activation with `pip install codeql` + query bundle.
+
+## Phase 3.1 · Tree-sitter Multi-Language — ✅ SHIPPED
+
+- `lucidcode/lang/frontend.py` — parser registry for Python / JS / TS / Go.
+- `lucidcode/lang/syndromes_multilang.py` — per-language node walker mapping to
+  the same 12-syndrome vocabulary.
+- 6 new regression tests (`tests/regression/test_multilang.py`) — all pass.
+- CLI auto-detects language from file extension and dispatches accordingly.
+
+## Real-world validation
+
+- **NEXUS-AI company core** (Python, 12 files): 14 real findings, all spot-checked (see `docs/REAL_WORLD_REPORT.md`).
+- **Thawani v2** (JavaScript, 30 files, 1.6s): 16 real Suppression findings.
+- **LucidCode dogfood** (own source, 15 files): 4 real Suppression findings.
+
 ## What's Next
 
 ### Immediate (this branch)
