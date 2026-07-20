@@ -1,0 +1,85 @@
+{
+  "name": "lucidcode",
+  "displayName": "LucidCode",
+  "description": "Your code confesses its own missing needs — validated by a 3-engine anti-hallucination ensemble.",
+  "version": "0.4.0",
+  "publisher": "lucidcode",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/61465/lucid"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "python",
+    "javascript",
+    "typescript",
+    "go",
+    "static analysis",
+    "linter",
+    "sast",
+    "code review"
+  ],
+  "activationEvents": [
+    "onLanguage:python",
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:go"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "lucidcode.analyzeCurrentFile",
+        "title": "LucidCode: Analyze current file",
+        "category": "LucidCode"
+      },
+      {
+        "command": "lucidcode.analyzeWorkspace",
+        "title": "LucidCode: Analyze entire workspace",
+        "category": "LucidCode"
+      },
+      {
+        "command": "lucidcode.showLatestReport",
+        "title": "LucidCode: Show latest report",
+        "category": "LucidCode"
+      }
+    ],
+    "configuration": {
+      "title": "LucidCode",
+      "properties": {
+        "lucidcode.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Python interpreter that has `lucidcode` importable (pip install lucidcode)."
+        },
+        "lucidcode.minVerdict": {
+          "type": "string",
+          "enum": ["TRUTH", "LIKELY", "DISPUTED"],
+          "default": "LIKELY",
+          "description": "Minimum verdict severity to surface as diagnostics."
+        },
+        "lucidcode.runOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Re-analyze the current file each time it is saved."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}

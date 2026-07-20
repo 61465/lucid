@@ -1,0 +1,26 @@
+{
+  "name": "lucidcode-github-app",
+  "version": "0.4.0",
+  "description": "Post LucidCode confessions as PR reviews on GitHub.",
+  "main": "app.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "probot run ./app.js",
+    "dev": "nodemon --exec 'probot run ./app.js'"
+  },
+  "dependencies": {
+    "probot": "^13.0.0",
+    "simple-git": "^3.24.0",
+    "tmp-promise": "^3.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/61465/lucid"
+  }
+}

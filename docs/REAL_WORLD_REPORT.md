@@ -69,6 +69,37 @@ python -m lucidcode.cli analyze lucidcode --no-color
 Lucid finds real issues even in its own carefully-written source. This is
 the ultimate proof of concept.
 
+## Results — MobeFace backend (Python, 2 files, small project)
+
+Ran on 2026-07-20 against `D:/project/mobeface/backend/` (a real personal
+project totally unaware LucidCode existed). **4 findings surfaced. 2 verified
+real, 2 identified as false positives on manual review.**
+
+| # | Location | Syndrome | Manual verdict |
+|---|---|---|---|
+| 1 | `storage.py:124` | Blind_Trust_SQLi | **FALSE POSITIVE** — f-string interpolates field names (`source = ?`, `hot = ?`), values themselves use `params.append()` parameterization. Code is safe. |
+| 2 | `main.py:251` | Suppression | **REAL** — `except ValueError: pass` silently swallows parse failures. |
+| 3 | `main.py:484` | Insomnia | **CORRECT-BUT-NOISY** — `while True + asyncio.sleep` is a legitimate async scraper pattern; `CancelledError` provides the exit. |
+| 4 | `main.py:338` | Compulsion | **FALSE POSITIVE** — `for idx, item in enumerate(items[:50])` iterates a list, not a retry loop. Detector triggered on `try/except` inside; needs stricter retry-semantics check. |
+
+### Precision on this run: **2/4 = 0.50**
+
+This is materially lower than the 22-fixture benchmark's 1.00. Interpretation:
+
+- **Small projects amplify false-positive risk** because a single sloppy
+  detector can dominate the visible signal.
+- **SQL-injection detection is the highest-value CodeQL integration** — a
+  taint-flow engine would immediately upgrade the storage.py:124 finding to
+  `REFUTED` and correctly downgrade the verdict to `DISPUTED` or drop it.
+- **Compulsion needs tightening**: today's rule is "any loop containing
+  try/except with no sleep." That matches too many benign iterators. Fix
+  planned: require the loop body to re-invoke the same call site (real retry
+  shape) OR use a `retries` counter identifier.
+
+Filed as issues in the LucidCode repo:
+- `syndromes/Compulsion`: tighten to real retry patterns
+- `validators/dataflow`: wire CodeQL to distinguish field-name vs value f-string SQL
+
 ## Take-aways
 
 1. **The AST Surgeon generalises**. It correctly flagged real production
