@@ -1,0 +1,10 @@
+{
+  "fixture": "sqli_neg_field_meta_and_params.py",
+  "syndrome": "Blind_Trust_SQLi",
+  "expect": [
+    {
+      "line": 8,
+      "should_detect": false
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "fixture": "compulsion_neg_with_sleep.py",
+  "syndrome": "Compulsion",
+  "expect": [
+    {
+      "line": 3,
+      "should_detect": false
+    }
+  ]
+}

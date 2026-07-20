@@ -1,0 +1,10 @@
+{
+  "fixture": "compulsion_neg_iter_list.py",
+  "syndrome": "Compulsion",
+  "expect": [
+    {
+      "line": 3,
+      "should_detect": false
+    }
+  ]
+}

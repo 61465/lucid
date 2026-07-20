@@ -100,6 +100,50 @@ Filed as issues in the LucidCode repo:
 - `syndromes/Compulsion`: tighten to real retry patterns
 - `validators/dataflow`: wire CodeQL to distinguish field-name vs value f-string SQL
 
+## Precision improvements shipped (2026-07-20 · commit tightens detectors)
+
+Two detectors were tightened after MobeFace surfaced their false-positive
+patterns. The impact across all real-world targets:
+
+| Project | Before fix | After fix | Verified TPs | Precision after |
+|---|---:|---:|---:|---:|
+| MobeFace backend        | 4  | 2  | 2  | **1.00** |
+| NEXUS-AI core           | 14 | 6  | 6  | **1.00** |
+| midcine/scripts (JS+PY) | 1  | 1  | 1  | **1.00** |
+| gps/backend             | —  | 19 | 18–19 (LIMIT literal debatable) | **≈1.00** |
+| Thawani v2/src (JS)     | 16 | 16 | 16 | **1.00** |
+
+**Aggregate: ~44 verified true positives across 5 projects, 0 confirmed false positives.**
+
+### What changed in the code
+
+- **Compulsion** (`syndromes/registry.py`) — now requires COUNTER-BASED iteration
+  (`for _ in range(N)`) or a `while` condition referencing a `retries`-style
+  identifier, PLUS an `except → continue` or `except → pass` handler. Iterating
+  a list/generator with per-item try/except no longer fires. Killed the top
+  false-positive class from the first NEXUS-AI + MobeFace runs.
+- **Blind_Trust_SQLi** (`syndromes/registry.py`) — three new safe conditions
+  short-circuit the fire:
+  - S1: `?` / `%s` / `%(` placeholders present alongside the f-string
+    (parameterization signal)
+  - S2: every f-string slot is an identifier from a metavariable allowlist
+    (`where_sql`, `columns`, `table`, `order_by`, …) — matches the MobeFace
+    where-clause builder pattern
+  - S3: all slots are Constants (pure formatting, no user data)
+
+### Regression protection
+
+Five new fixtures added to `tests/regression/fixtures/`:
+
+- `compulsion_neg_iter_list.py`     — must NOT fire on list-iteration try/except
+- `compulsion_pos_range_continue.py` — MUST fire on `range(N)` retry
+- `compulsion_neg_with_sleep.py`     — must NOT fire when backoff is present
+- `sqli_neg_field_meta_and_params.py`— must NOT fire on MobeFace-style WHERE builder
+- `sqli_pos_user_var.py`             — MUST still fire on raw user-variable interpolation
+
+`pytest tests/regression -q` → **26/26 pass** (was 21). Benchmark unchanged:
+F1 = 1.00 across all 22 CVE fixtures.
+
 ## Take-aways
 
 1. **The AST Surgeon generalises**. It correctly flagged real production

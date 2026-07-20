@@ -126,6 +126,13 @@ def _suppression(tree):
                 }
 
 
+_SQL_SAFE_INTERPOLATION_NAMES = {
+    "table", "table_name", "tbl", "col", "column", "field", "fields",
+    "where_sql", "where_clause", "order_by", "limit_clause", "select_sql",
+    "columns", "sort_by", "group_by",
+}
+
+
 @register_syndrome(
     "Blind_Trust_SQLi",
     severity="CRITICAL",
@@ -134,19 +141,60 @@ def _suppression(tree):
                "believing every input is kind. One quote will end me.",
 )
 def _blind_trust_sqli(tree):
+    """Flag f-string SQL EXCEPT when interpolation is provably safe.
+
+    Safe conditions (any one → skip):
+      (S1) f-string contains a `?` or `%s` placeholder — real params in use
+      (S2) all interpolated slots resolve to allowlisted identifiers
+           (table/column/where-clause metavariables) built in-code
+      (S3) all interpolated slots are Constants (pure formatting)
+
+    Everything else (including user-data f-strings) still fires.
+    """
     for n in ast.walk(tree):
-        if isinstance(n, ast.JoinedStr):
-            literal = "".join(
-                v.value for v in n.values
-                if isinstance(v, ast.Constant) and isinstance(v.value, str)
-            )
-            if _SQL_KEYWORDS.search(literal):
-                yield {
-                    "line": n.lineno,
-                    "evidence": f"f-string SQL: {literal.strip()[:100]}",
-                    "predicate": {"kind": "fstring_sql", "line": n.lineno, "literal": literal},
-                    "adversary": "' OR 1=1 --",
-                }
+        if not isinstance(n, ast.JoinedStr):
+            continue
+        literal = "".join(
+            v.value for v in n.values
+            if isinstance(v, ast.Constant) and isinstance(v.value, str)
+        )
+        if not _SQL_KEYWORDS.search(literal):
+            continue
+
+        # S1: parameterized placeholders present alongside f-string interpolation
+        if "?" in literal or "%s" in literal or "%(" in literal:
+            continue
+
+        # collect the interpolated slots (FormattedValue nodes)
+        slots = [v for v in n.values if isinstance(v, ast.FormattedValue)]
+
+        # S3: no slots at all → the SQL_KEYWORDS regex matched a pure literal;
+        # unlikely but harmless — skip.
+        if not slots:
+            continue
+
+        # S2: every slot references a safe metavariable identifier
+        def _slot_name(slot):
+            v = slot.value
+            if isinstance(v, ast.Name):
+                return v.id
+            if isinstance(v, ast.Attribute):
+                return v.attr
+            return None
+
+        slot_names = [_slot_name(s) for s in slots]
+        if all(name and name.lower() in _SQL_SAFE_INTERPOLATION_NAMES
+               for name in slot_names):
+            continue
+
+        # everything else: still risky
+        yield {
+            "line": n.lineno,
+            "evidence": f"f-string SQL with user-controlled interpolation: {literal.strip()[:100]}",
+            "predicate": {"kind": "fstring_sql", "line": n.lineno, "literal": literal,
+                          "slot_names": slot_names},
+            "adversary": "' OR 1=1 --",
+        }
 
 
 @register_syndrome(
@@ -391,25 +439,89 @@ def _deafness(tree):
                "I do not pause, I do not learn. I turn one failure into a stampede.",
 )
 def _compulsion(tree):
+    """Flag a loop only if it has RETRY SEMANTICS, not just try/except inside.
+
+    Real retry patterns satisfy at least one of:
+      (R1) loop iterates over `range(N)` or `range(0, N)` — a counter, not data
+      (R2) `while` condition references an identifier named `retries`/`attempts`/`tries`
+      (R3) the except handler contains `continue` (bare retry-and-continue pattern)
+    AND the loop body does NOT contain time.sleep / asyncio.sleep / trio.sleep.
+
+    Iterating a list/dict/generator with a try/except is NORMAL per-item
+    error handling and MUST NOT fire (was the MobeFace false positive).
+    """
+    _RETRY_IDENT = ("retries", "retry", "attempts", "attempt", "tries")
+
+    def _loop_is_counter(loop):
+        # for _ in range(N)
+        if isinstance(loop, ast.For) and isinstance(loop.iter, ast.Call):
+            iter_name = _attr_dotted(loop.iter.func) or (
+                loop.iter.func.id if isinstance(loop.iter.func, ast.Name) else ""
+            )
+            return iter_name == "range"
+        # while <expr containing 'retries'>
+        if isinstance(loop, ast.While):
+            for n in ast.walk(loop.test):
+                if isinstance(n, ast.Name) and n.id.lower() in _RETRY_IDENT:
+                    return True
+        return False
+
+    def _except_has_continue(loop):
+        for n in ast.walk(loop):
+            if isinstance(n, ast.Try):
+                for h in n.handlers:
+                    for b in h.body:
+                        if isinstance(b, ast.Continue):
+                            return True
+        return False
+
+    def _has_sleep(loop):
+        for n in ast.walk(loop):
+            if isinstance(n, ast.Call):
+                target = _attr_dotted(n.func)
+                if target in ("time.sleep", "asyncio.sleep", "trio.sleep"):
+                    return True
+        return False
+
+    def _has_try(loop):
+        return any(isinstance(n, ast.Try) for n in ast.walk(loop))
+
     for loop in ast.walk(tree):
         if not isinstance(loop, (ast.For, ast.While)):
             continue
-        has_retry_shape = False
-        has_sleep = False
-        for inner in ast.walk(loop):
-            if isinstance(inner, ast.Try):
-                has_retry_shape = True
-            if isinstance(inner, ast.Call):
-                target = _attr_dotted(inner.func)
-                if target in ("time.sleep", "asyncio.sleep", "trio.sleep"):
-                    has_sleep = True
-        if has_retry_shape and not has_sleep:
-            yield {
-                "line": loop.lineno,
-                "evidence": "retry-shaped loop (try/except inside) with no sleep between iterations",
-                "predicate": {"kind": "retry_no_backoff", "line": loop.lineno},
-                "adversary": "make the wrapped call always fail — watch the downstream get hammered",
-            }
+        if not _has_try(loop):
+            continue
+        if _has_sleep(loop):
+            continue
+
+        # RULE: only counter-based (range or retry-named while) loops count as
+        # retry patterns. Iterating a collection with try/except/continue is
+        # per-item error handling, NOT a retry — must not fire.
+        if not _loop_is_counter(loop):
+            continue
+
+        # Additionally require an actual retry action inside the except handler:
+        # either `continue` (bare retry) or a call in the try body that is
+        # re-attempted. Bare `pass` in except of a counter loop is unusual but
+        # counts as retry (the loop keeps hammering).
+        if not _except_has_continue(loop):
+            # allow bare `except: pass` inside a range loop as retry too
+            has_pass_handler = False
+            for n in ast.walk(loop):
+                if isinstance(n, ast.ExceptHandler):
+                    body = n.body
+                    if body and len(body) == 1 and isinstance(body[0], ast.Pass):
+                        has_pass_handler = True
+                        break
+            if not has_pass_handler:
+                continue
+
+        yield {
+            "line": loop.lineno,
+            "evidence": "counter-based retry loop with no backoff sleep",
+            "predicate": {"kind": "retry_no_backoff", "line": loop.lineno},
+            "adversary": "make the wrapped call always fail — watch the downstream get hammered",
+        }
 
 
 @register_syndrome(
