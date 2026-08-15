@@ -1,0 +1,10 @@
+{
+  "fixture": "regex_dos_neg.py",
+  "syndrome": "Regex_DoS",
+  "expect": [
+    {
+      "line": 3,
+      "should_detect": false
+    }
+  ]
+}

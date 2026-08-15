@@ -133,68 +133,153 @@ _SQL_SAFE_INTERPOLATION_NAMES = {
 }
 
 
+def _sql_slot_name(node):
+    """Resolve an f-string/BinOp interpolation slot to its identifier name."""
+    v = node.value if isinstance(node, ast.FormattedValue) else node
+    if isinstance(v, ast.Name):
+        return v.id
+    if isinstance(v, ast.Attribute):
+        return v.attr
+    if isinstance(v, ast.Call):
+        return None
+    return None
+
+
+def _is_safe_slot(slot):
+    n = _sql_slot_name(slot)
+    return bool(n and n.lower() in _SQL_SAFE_INTERPOLATION_NAMES)
+
+
+def _fstring_sql_literal(node):
+    if not isinstance(node, ast.JoinedStr):
+        return ""
+    return "".join(
+        v.value for v in node.values
+        if isinstance(v, ast.Constant) and isinstance(v.value, str)
+    )
+
+
 @register_syndrome(
     "Blind_Trust_SQLi",
     severity="CRITICAL",
-    description="SQL statement built by f-string — user data becomes control-flow.",
+    description="SQL statement built by string interpolation — user data becomes control-flow.",
     confession="I confessed at line {line}: I built SQL by string concatenation, "
                "believing every input is kind. One quote will end me.",
 )
 def _blind_trust_sqli(tree):
-    """Flag f-string SQL EXCEPT when interpolation is provably safe.
+    """Detect SQL injection across four Python interpolation vectors:
+      (V1) f-string:    f"SELECT ... {uid}"
+      (V2) % operator:  "SELECT ... %s" % uid
+      (V3) .format():   "SELECT ... {}".format(uid)
+      (V4) + concat:    "SELECT ... " + uid
 
-    Safe conditions (any one → skip):
-      (S1) f-string contains a `?` or `%s` placeholder — real params in use
-      (S2) all interpolated slots resolve to allowlisted identifiers
-           (table/column/where-clause metavariables) built in-code
-      (S3) all interpolated slots are Constants (pure formatting)
-
-    Everything else (including user-data f-strings) still fires.
+    Skip when any of these safe conditions hold:
+      (S1) literal contains ? / %s / %( placeholders — real params in use
+      (S2) every interpolated slot resolves to a safe metavariable identifier
+      (S3) all slots are Constants (pure formatting)
     """
-    for n in ast.walk(tree):
-        if not isinstance(n, ast.JoinedStr):
-            continue
-        literal = "".join(
-            v.value for v in n.values
-            if isinstance(v, ast.Constant) and isinstance(v.value, str)
-        )
-        if not _SQL_KEYWORDS.search(literal):
-            continue
 
-        # S1: parameterized placeholders present alongside f-string interpolation
-        if "?" in literal or "%s" in literal or "%(" in literal:
-            continue
+    def _skip_placeholder(literal):
+        return "?" in literal or "%s" in literal or "%(" in literal
 
-        # collect the interpolated slots (FormattedValue nodes)
-        slots = [v for v in n.values if isinstance(v, ast.FormattedValue)]
-
-        # S3: no slots at all → the SQL_KEYWORDS regex matched a pure literal;
-        # unlikely but harmless — skip.
-        if not slots:
-            continue
-
-        # S2: every slot references a safe metavariable identifier
-        def _slot_name(slot):
-            v = slot.value
-            if isinstance(v, ast.Name):
-                return v.id
-            if isinstance(v, ast.Attribute):
-                return v.attr
-            return None
-
-        slot_names = [_slot_name(s) for s in slots]
-        if all(name and name.lower() in _SQL_SAFE_INTERPOLATION_NAMES
-               for name in slot_names):
-            continue
-
-        # everything else: still risky
-        yield {
-            "line": n.lineno,
-            "evidence": f"f-string SQL with user-controlled interpolation: {literal.strip()[:100]}",
-            "predicate": {"kind": "fstring_sql", "line": n.lineno, "literal": literal,
-                          "slot_names": slot_names},
+    def _emit(kind, node, literal, slot_names):
+        return {
+            "line": node.lineno,
+            "evidence": f"{kind} SQL with user-controlled interpolation: {literal.strip()[:100]}",
+            "predicate": {"kind": kind, "line": node.lineno,
+                          "literal": literal, "slot_names": slot_names},
             "adversary": "' OR 1=1 --",
         }
+
+    for n in ast.walk(tree):
+        # ─── V1: f-string ──────────────────────────────────
+        if isinstance(n, ast.JoinedStr):
+            literal = _fstring_sql_literal(n)
+            if not _SQL_KEYWORDS.search(literal):
+                continue
+            if _skip_placeholder(literal):
+                continue
+            slots = [v for v in n.values if isinstance(v, ast.FormattedValue)]
+            if not slots:
+                continue
+            slot_names = [_sql_slot_name(s) for s in slots]
+            if all(name and name.lower() in _SQL_SAFE_INTERPOLATION_NAMES
+                   for name in slot_names):
+                continue
+            yield _emit("fstring_sql", n, literal, slot_names)
+            continue
+
+        # ─── V2: "..." % var  or  "..." % (var, ...) ────────
+        if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Mod):
+            left = n.left
+            if isinstance(left, ast.Constant) and isinstance(left.value, str):
+                literal = left.value
+                if not _SQL_KEYWORDS.search(literal):
+                    continue
+                right = n.right
+                if isinstance(right, (ast.Tuple, ast.List)):
+                    args = right.elts
+                else:
+                    args = [right]
+                if not args:
+                    continue
+                if all(isinstance(a, ast.Constant) for a in args):
+                    continue
+                slot_names = [_sql_slot_name(a) for a in args]
+                if all(name and name.lower() in _SQL_SAFE_INTERPOLATION_NAMES
+                       for name in slot_names):
+                    continue
+                yield _emit("percent_sql", n, literal, slot_names)
+                continue
+
+        # ─── V3: "...".format(var, ...) ─────────────────────
+        if (isinstance(n, ast.Call)
+                and isinstance(n.func, ast.Attribute)
+                and n.func.attr in ("format", "format_map")
+                and isinstance(n.func.value, ast.Constant)
+                and isinstance(n.func.value.value, str)):
+            literal = n.func.value.value
+            if not _SQL_KEYWORDS.search(literal):
+                continue
+            args = list(n.args) + [kw.value for kw in n.keywords]
+            if not args:
+                continue
+            if all(isinstance(a, ast.Constant) for a in args):
+                continue
+            slot_names = [_sql_slot_name(a) for a in args]
+            if slot_names and all(name and name.lower() in _SQL_SAFE_INTERPOLATION_NAMES
+                                   for name in slot_names):
+                continue
+            yield _emit("format_sql", n, literal, slot_names)
+            continue
+
+        # ─── V4: "SELECT ..." + var  (recursive add chains) ─
+        if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Add):
+            # collect all string operands in the addition chain
+            def _flatten_add(node):
+                if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+                    yield from _flatten_add(node.left)
+                    yield from _flatten_add(node.right)
+                else:
+                    yield node
+            parts = list(_flatten_add(n))
+            str_parts = [p.value for p in parts
+                         if isinstance(p, ast.Constant) and isinstance(p.value, str)]
+            if not str_parts:
+                continue
+            combined = " ".join(str_parts)
+            if not _SQL_KEYWORDS.search(combined):
+                continue
+            var_parts = [p for p in parts if not isinstance(p, ast.Constant)]
+            if not var_parts:
+                continue
+            slot_names = [_sql_slot_name(v) for v in var_parts]
+            if all(name and name.lower() in _SQL_SAFE_INTERPOLATION_NAMES
+                   for name in slot_names):
+                continue
+            # Only fire on the topmost BinOp of a chain to avoid duplicates
+            # (parent walk order will visit the outermost first)
+            yield _emit("concat_sql", n, combined, slot_names)
 
 
 @register_syndrome(
@@ -567,6 +652,277 @@ def _selective_mutism(tree):
                 "predicate": {"kind": "swallow_baseexception", "line": n.lineno, "kind_type": target},
                 "adversary": "send KeyboardInterrupt to a long-running loop wrapped by this except",
             }
+
+
+# ══════════════════════════════════════════════════════════════════
+# SIX NEW SECURITY SYNDROMES (v4.1)
+# ══════════════════════════════════════════════════════════════════
+
+_SECRET_VAR_NAMES = {
+    "api_key", "apikey", "secret_key", "secret", "password", "passwd",
+    "token", "access_key", "access_token", "private_key", "auth_token",
+    "bearer_token", "client_secret",
+}
+_SECRET_VALUE_RE = re.compile(
+    r"(?:^(sk-|AKIA|AIza|ghp_|xox[baprs]-)[A-Za-z0-9_\-]{10,}|"
+    r"^[A-Za-z0-9_\-/+]{24,}$)"
+)
+_REGEX_DOS_RE = re.compile(r"\([^)]*[+*]\)[+*]|\([^)]*\+[^)]*\)\+|\(\.\+\)\+|\(\.\*\)\*")
+_DANGEROUS_DESERIALIZERS = {
+    "pickle.loads", "pickle.load",
+    "cPickle.loads", "cPickle.load",
+    "marshal.loads", "marshal.load",
+    "shelve.open",
+}
+
+
+@register_syndrome(
+    "Weak_Crypto",
+    severity="HIGH",
+    description="Use of broken cryptographic hash functions (MD5/SHA1).",
+    confession="I confessed at line {line}: I trusted MD5 or SHA1 to keep my secrets. "
+               "Both have been broken for over a decade. What was I protecting?",
+)
+def _weak_crypto(tree):
+    weak_names = {"md5", "sha1"}
+    for n in ast.walk(tree):
+        if not isinstance(n, ast.Call):
+            continue
+        target = _attr_dotted(n.func) or (n.func.id if isinstance(n.func, ast.Name) else "")
+        if target in {"hashlib.md5", "hashlib.sha1"}:
+            yield {
+                "line": n.lineno,
+                "evidence": f"{target}()",
+                "predicate": {"kind": "weak_hash", "line": n.lineno, "algo": target.split(".")[-1]},
+                "adversary": "forge a collision to bypass integrity checks",
+            }
+        elif isinstance(n.func, ast.Attribute) and n.func.attr == "new":
+            # Crypto.Hash.MD5.new() / Cryptodome.Hash.SHA1.new()
+            parent = _attr_dotted(n.func.value)
+            if parent and any(w in parent for w in ("MD5", "SHA1")):
+                yield {
+                    "line": n.lineno,
+                    "evidence": f"{parent}.new()",
+                    "predicate": {"kind": "weak_hash", "line": n.lineno, "algo": parent},
+                    "adversary": "forge a collision to bypass integrity checks",
+                }
+
+
+@register_syndrome(
+    "Hardcoded_Secret",
+    severity="CRITICAL",
+    description="API key / password / token assigned as a string literal in source.",
+    confession="I confessed at line {line}: I hardcoded a secret in the source. "
+               "Every commit, every clone, every fork carries it forward.",
+)
+def _hardcoded_secret(tree):
+    for n in ast.walk(tree):
+        if not isinstance(n, ast.Assign):
+            continue
+        if not (isinstance(n.value, ast.Constant) and isinstance(n.value.value, str)):
+            continue
+        literal = n.value.value
+        if not _SECRET_VALUE_RE.search(literal):
+            continue
+        for target in n.targets:
+            name = None
+            if isinstance(target, ast.Name):
+                name = target.id
+            elif isinstance(target, ast.Attribute):
+                name = target.attr
+            if name and name.lower() in _SECRET_VAR_NAMES:
+                yield {
+                    "line": n.lineno,
+                    "evidence": f"{name} = <redacted:{len(literal)}-char string>",
+                    "predicate": {"kind": "hardcoded_secret", "line": n.lineno, "var": name},
+                    "adversary": "grep the repo history — the key is there in every clone",
+                }
+                break
+
+
+@register_syndrome(
+    "Regex_DoS",
+    severity="MEDIUM",
+    description="Regex with catastrophic backtracking patterns (nested unbounded quantifiers).",
+    confession="I confessed at line {line}: My regex has nested quantifiers. "
+               "One adversarial input turns me into a CPU heater.",
+)
+def _regex_dos(tree):
+    for n in ast.walk(tree):
+        if not isinstance(n, ast.Call):
+            continue
+        target = _attr_dotted(n.func)
+        if target not in ("re.compile", "re.match", "re.search",
+                          "re.sub", "re.findall", "re.finditer", "re.fullmatch"):
+            continue
+        if not n.args:
+            continue
+        first = n.args[0]
+        if not (isinstance(first, ast.Constant) and isinstance(first.value, str)):
+            continue
+        pattern = first.value
+        if _REGEX_DOS_RE.search(pattern):
+            yield {
+                "line": n.lineno,
+                "evidence": f"catastrophic pattern in {target}: {pattern[:80]!r}",
+                "predicate": {"kind": "regex_dos", "line": n.lineno, "pattern": pattern[:200]},
+                "adversary": "feed a string like 'aaaaaaaaaa!' — backtracking explodes",
+            }
+
+
+@register_syndrome(
+    "Path_Traversal",
+    severity="HIGH",
+    description="open() with a dynamic path derived from external input — no sandbox.",
+    confession="I confessed at line {line}: I open whatever path the caller hands me. "
+               "'../../etc/passwd' is a valid path to me.",
+)
+def _path_traversal(tree):
+    def _is_external_source(node):
+        # sys.argv[i], request.args.get(...), request.form[...], os.environ[...]
+        if isinstance(node, ast.Subscript):
+            base = _attr_dotted(node.value)
+            if base in ("sys.argv", "os.environ"):
+                return True
+            if isinstance(node.value, ast.Attribute) and node.value.attr in ("args", "form", "json", "params"):
+                return True
+        if isinstance(node, ast.Call):
+            target = _attr_dotted(node.func)
+            if target in ("input", "sys.stdin.readline",
+                          "request.args.get", "request.form.get",
+                          "request.json.get", "request.values.get"):
+                return True
+        if isinstance(node, ast.Attribute):
+            base = _attr_dotted(node)
+            if base and base.startswith("request."):
+                return True
+        return False
+
+    for n in ast.walk(tree):
+        if not (isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "open"):
+            continue
+        if not n.args:
+            continue
+        arg = n.args[0]
+        if isinstance(arg, ast.Constant):
+            continue  # hardcoded path — safe
+        # any Name / Subscript / Attribute / Call from external source
+        risky = (
+            isinstance(arg, ast.Name)
+            or _is_external_source(arg)
+            or (isinstance(arg, ast.BinOp) and isinstance(arg.op, ast.Add))
+        )
+        if risky:
+            yield {
+                "line": n.lineno,
+                "evidence": "open() called with a non-constant path",
+                "predicate": {"kind": "path_traversal", "line": n.lineno},
+                "adversary": "pass ../../etc/passwd or ..\\..\\Windows\\win.ini",
+            }
+
+
+@register_syndrome(
+    "Insecure_Deserialization",
+    severity="CRITICAL",
+    description="pickle/marshal/yaml.load/eval/exec on untrusted data — arbitrary code execution.",
+    confession="I confessed at line {line}: I deserialize bytes I did not create. "
+               "Anyone who controls the input controls the process.",
+)
+def _insecure_deserialization(tree):
+    for n in ast.walk(tree):
+        if not isinstance(n, ast.Call):
+            continue
+        # eval / exec with a non-constant argument
+        if isinstance(n.func, ast.Name) and n.func.id in ("eval", "exec"):
+            if n.args and not (isinstance(n.args[0], ast.Constant)
+                               and isinstance(n.args[0].value, str)):
+                yield {
+                    "line": n.lineno,
+                    "evidence": f"{n.func.id}() on dynamic argument",
+                    "predicate": {"kind": "eval_exec", "line": n.lineno, "fn": n.func.id},
+                    "adversary": "pass '__import__(\"os\").system(\"id\")'",
+                }
+                continue
+        target = _attr_dotted(n.func)
+        if target in _DANGEROUS_DESERIALIZERS:
+            yield {
+                "line": n.lineno,
+                "evidence": f"{target}() on untrusted bytes",
+                "predicate": {"kind": "unsafe_deserialize", "line": n.lineno, "fn": target},
+                "adversary": "craft a pickle payload that runs os.system('id') on load",
+            }
+            continue
+        # yaml.load without SafeLoader
+        if target == "yaml.load":
+            has_safe_loader = False
+            for kw in n.keywords:
+                if kw.arg == "Loader":
+                    loader = _attr_dotted(kw.value) or (
+                        kw.value.id if isinstance(kw.value, ast.Name) else "")
+                    if "Safe" in loader:
+                        has_safe_loader = True
+                        break
+            if not has_safe_loader:
+                yield {
+                    "line": n.lineno,
+                    "evidence": "yaml.load() without Loader=SafeLoader",
+                    "predicate": {"kind": "unsafe_deserialize", "line": n.lineno, "fn": "yaml.load"},
+                    "adversary": "craft a YAML payload with !!python/object/apply:os.system",
+                }
+
+
+@register_syndrome(
+    "Race_Condition",
+    severity="MEDIUM",
+    description="TOCTOU: os.path.exists(p) followed by open(p) — attacker can swap the path between checks.",
+    confession="I confessed at line {line}: I checked the path, then opened it. "
+               "In the gap between check and use, anything can happen.",
+)
+def _race_condition(tree):
+    for fn in ast.walk(tree):
+        if not isinstance(fn, ast.FunctionDef):
+            continue
+        # Find every os.path.exists(X) call and its argument identifier
+        check_calls: dict[str, int] = {}   # arg identifier → line
+        for c in ast.walk(fn):
+            if not (isinstance(c, ast.Call) and _attr_dotted(c.func) == "os.path.exists"):
+                continue
+            if not c.args:
+                continue
+            arg = c.args[0]
+            if isinstance(arg, ast.Name):
+                check_calls[arg.id] = c.lineno
+        # Look for subsequent open(same_name) that isn't inside a try
+        for u in ast.walk(fn):
+            if not (isinstance(u, ast.Call) and isinstance(u.func, ast.Name)
+                    and u.func.id == "open"):
+                continue
+            if not u.args or not isinstance(u.args[0], ast.Name):
+                continue
+            name = u.args[0].id
+            if name not in check_calls:
+                continue
+            if u.lineno <= check_calls[name]:
+                continue
+            # inside a try? (simple ancestor check)
+            in_try = False
+            for parent in ast.walk(fn):
+                if isinstance(parent, ast.Try):
+                    for child in ast.walk(parent):
+                        if child is u:
+                            in_try = True
+                            break
+                    if in_try:
+                        break
+            if not in_try:
+                yield {
+                    "line": u.lineno,
+                    "evidence": f"os.path.exists({name}) at line {check_calls[name]} "
+                                f"followed by open({name}) at line {u.lineno}",
+                    "predicate": {"kind": "toctou", "line": u.lineno,
+                                  "check_line": check_calls[name], "var": name},
+                    "adversary": "in the microsecond between check and open, replace the file with a symlink",
+                }
 
 
 # ══════════════════════════════════════════════════════════════════

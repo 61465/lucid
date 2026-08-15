@@ -1,0 +1,10 @@
+{
+  "fixture": "weak_crypto_pos.py",
+  "syndrome": "Weak_Crypto",
+  "expect": [
+    {
+      "line": 3,
+      "should_detect": true
+    }
+  ]
+}

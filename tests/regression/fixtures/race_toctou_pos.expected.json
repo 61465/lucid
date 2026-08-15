@@ -1,0 +1,10 @@
+{
+  "fixture": "race_toctou_pos.py",
+  "syndrome": "Race_Condition",
+  "expect": [
+    {
+      "line": 4,
+      "should_detect": true
+    }
+  ]
+}

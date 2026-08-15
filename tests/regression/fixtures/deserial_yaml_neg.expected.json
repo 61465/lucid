@@ -1,0 +1,10 @@
+{
+  "fixture": "deserial_yaml_neg.py",
+  "syndrome": "Insecure_Deserialization",
+  "expect": [
+    {
+      "line": 3,
+      "should_detect": false
+    }
+  ]
+}
