@@ -1,0 +1,74 @@
+[
+  {
+    "module": "test_requests.py",
+    "score": 277.0
+  },
+  {
+    "module": "requests/models.py",
+    "score": 60.06
+  },
+  {
+    "module": "requests/utils.py",
+    "score": 28.33
+  },
+  {
+    "module": "requests/sessions.py",
+    "score": 27.93
+  },
+  {
+    "module": "requests/cookies.py",
+    "score": 24.59
+  },
+  {
+    "module": "requests/adapters.py",
+    "score": 23.66
+  },
+  {
+    "module": "docs/conf.py",
+    "score": 17.82
+  },
+  {
+    "module": "requests/auth.py",
+    "score": 16.24
+  },
+  {
+    "module": "requests/api.py",
+    "score": 12.81
+  },
+  {
+    "module": "requests/certs.py",
+    "score": 11.6
+  },
+  {
+    "module": "requests/hooks.py",
+    "score": 10.98
+  },
+  {
+    "module": "requests/compat.py",
+    "score": 10.51
+  },
+  {
+    "module": "setup.py",
+    "score": 10.2
+  },
+  {
+    "module": "requests/__init__.py",
+    "score": 10.13
+  },
+  {
+    "module": "requests/structures.py",
+    "score": 9.98
+  },
+  {
+    "module": "docs/_themes/flask_theme_support.py",
+    "score": 9.91
+  },
+  {
+    "module": "requests/status_codes.py",
+    "score": 9.84
+  },
+  {
+    "module": "requests/exceptions.py",
+    "score": 9.62
+  }
+]

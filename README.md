@@ -1,4 +1,20 @@
-# LucidCode
+# LucidCode + Laundry
+
+> **LucidCode compels the truth. Laundry ships the change.**
+
+Two tools, one Charter. LucidCode makes legacy code confess its latent bugs.
+**Laundry** picks up where confession ends: it runs 12 specialised agents
+against the same repository and produces a signed evidence bundle a human
+engineer approves before anything ships.
+
+* **LucidCode** finds the WHY — see [`lucidcode/`](lucidcode/) and the live
+  landing page.
+* **Laundry** ships the HOW — see the [Laundry page](landing/laundry.html)
+  with a live demo against `psf/requests v2.7.0`.
+
+---
+
+## Original LucidCode
 
 > **It doesn't find bugs. It compels the truth.**
 

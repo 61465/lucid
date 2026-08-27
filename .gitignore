@@ -47,6 +47,11 @@ comp_samples/
 *.pdf
 *.html
 !landing/index.html
+!landing/laundry.html
 
 # Legacy v1-v3 prototypes kept on disk locally but not tracked in git.
 archive/
+
+# Laundry demo — clone target + bundle output are regenerated on demand
+landing/demo_project/requests_v2_7/
+landing/demo_project/laundry_out/

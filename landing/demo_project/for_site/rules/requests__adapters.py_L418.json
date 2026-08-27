@@ -1,0 +1,6 @@
+{
+  "claim": "when `isinstance(e.reason, ConnectTimeoutError)` -> raises `ConnectTimeout`",
+  "file": "requests/adapters.py",
+  "function": "send",
+  "line": 418
+}

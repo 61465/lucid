@@ -1,0 +1,6 @@
+{
+  "claim": "when `isinstance(e.reason, ResponseError)` -> raises `RetryError`",
+  "file": "requests/adapters.py",
+  "function": "send",
+  "line": 421
+}

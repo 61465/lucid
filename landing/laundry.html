@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LucidCode Laundry — Legacy code goes in, evidence comes out.</title>
+<meta name="description" content="Laundry never merges. It runs 12 specialised agents against your legacy code and produces a signed evidence bundle a human engineer can approve — with the full before/after explanation for every unit.">
+<style>
+  :root{
+    --bg:#0A0A0A; --panel:#111; --panel-2:#161616; --border:#333; --gold:#D4AF37;
+    --gold-dim:#8a7328; --text:#ccc; --dim:#666; --red:#c46060; --amber:#d1a13e;
+    --green:#8fff9a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;line-height:1.6;}
+  a{color:var(--gold);text-decoration:none;}
+  a:hover{opacity:.8;}
+  h1,h2,h3,h4,pre,code{font-family:'Courier New',ui-monospace,monospace;}
+  code{background:rgba(212,175,55,.08);padding:2px 6px;border-radius:3px;font-size:.9em;color:#f2e6bc;}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px;}
+
+  /* NAV */
+  nav{padding:22px 0;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
+  nav .logo{font-family:'Courier New',monospace;font-size:20px;letter-spacing:6px;color:var(--gold);}
+  nav ul{list-style:none;display:flex;gap:26px;}
+  nav ul a{color:var(--text);font-size:14px;}
+  nav ul a.active{color:var(--gold);}
+
+  /* HERO */
+  .hero{padding:80px 0 50px;text-align:center;}
+  .hero .badge{display:inline-block;padding:6px 14px;border:1px solid var(--gold);border-radius:20px;font-size:12px;letter-spacing:2px;color:var(--gold);margin-bottom:24px;text-transform:uppercase;}
+  .hero h1{font-size:3rem;line-height:1.1;color:#f2e6bc;letter-spacing:-.5px;margin-bottom:22px;}
+  .hero p.lead{font-size:1.2rem;max-width:640px;margin:0 auto 32px;}
+  .cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+  .btn{display:inline-block;padding:14px 26px;font-family:'Courier New',monospace;font-size:14px;letter-spacing:2px;border-radius:4px;cursor:pointer;text-transform:uppercase;transition:all .15s;border:0;}
+  .btn.primary{background:var(--gold);color:#0A0A0A;border:1px solid var(--gold);font-weight:700;}
+  .btn.primary:hover{background:transparent;color:var(--gold);}
+  .btn.ghost{background:transparent;color:var(--gold);border:1px solid var(--gold);}
+  .btn.ghost:hover{background:rgba(212,175,55,.08);}
+
+  /* PROMISE */
+  .promise{padding:60px 0;border-top:1px solid var(--border);}
+  .promise h2{color:#f2e6bc;font-size:2rem;margin-bottom:14px;text-align:center;}
+  .promise .sub{text-align:center;color:var(--dim);margin-bottom:40px;}
+  .three{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:26px;}
+  .card h3{color:var(--gold);font-size:1.1rem;margin-bottom:12px;}
+  .card p{font-size:.95rem;color:#aaa;}
+
+  /* AGENTS */
+  .agents{padding:60px 0;border-top:1px solid var(--border);}
+  .agents h2{color:#f2e6bc;font-size:2rem;margin-bottom:14px;}
+  .agents .sub{color:var(--dim);margin-bottom:30px;}
+  .agent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
+  .agent{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px;position:relative;}
+  .agent .num{position:absolute;top:12px;right:12px;color:var(--gold-dim);font-family:'Courier New',monospace;font-size:12px;}
+  .agent h4{color:var(--gold);font-size:.95rem;margin-bottom:6px;font-family:'Courier New',monospace;}
+  .agent p{color:#999;font-size:.85rem;}
+
+  /* DEMO */
+  .demo-section{padding:80px 0;border-top:1px solid var(--border);background:linear-gradient(180deg,rgba(212,175,55,.03) 0%,transparent 100%);}
+  .demo-section h2{color:#f2e6bc;font-size:2.2rem;text-align:center;margin-bottom:14px;}
+  .demo-section .sub{text-align:center;color:var(--dim);margin-bottom:34px;font-size:1rem;}
+  .demo-target{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:22px 26px;margin-bottom:22px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;}
+  .demo-target .info{flex:1;min-width:280px;}
+  .demo-target h3{color:var(--gold);font-size:1.05rem;margin-bottom:6px;font-family:'Courier New',monospace;}
+  .demo-target p{color:#aaa;font-size:.9rem;}
+  .demo-target .stats{display:flex;gap:16px;font-size:.85rem;color:var(--dim);}
+  .demo-target .stats b{color:#f2e6bc;font-family:'Courier New',monospace;}
+  .demo-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:30px;}
+  .btn.run{background:var(--gold);color:#0A0A0A;font-weight:700;}
+  .btn.lucid{background:#4a1a1a;color:#ff9090;border:1px solid #c46060;}
+  .btn.lucid:hover{background:#5a2020;}
+
+  /* TERMINAL */
+  .term{background:#0e0e0e;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:20px;}
+  .term-head{background:#181818;padding:10px 14px;display:flex;gap:8px;border-bottom:1px solid var(--border);align-items:center;}
+  .term-head span.dot{width:12px;height:12px;border-radius:50%;background:#3a3a3a;}
+  .term-head .r{background:#ff5f56;} .term-head .y{background:#ffbd2e;} .term-head .g{background:#27c93f;}
+  .term-head .title{margin-left:12px;font-family:'Courier New',monospace;font-size:12px;color:#888;}
+  .term-body{padding:22px;font-family:'Courier New',ui-monospace,monospace;font-size:13px;color:#e0e0e0;min-height:280px;max-height:520px;overflow-y:auto;line-height:1.7;}
+  .term-body .sys{color:var(--dim);}
+  .term-body .agent-line{color:#7ec1ff;}
+  .term-body .ok{color:var(--green);}
+  .term-body .fail{color:var(--red);}
+  .term-body .warn{color:var(--amber);}
+  .term-body .gold{color:var(--gold);}
+  .cursor{display:inline-block;width:8px;height:14px;background:var(--gold);vertical-align:middle;animation:blink 1s steps(2) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  /* RESULTS */
+  .results{display:none;padding:40px 0;}
+  .results.show{display:block;}
+  .results h3{color:var(--gold);font-size:1.3rem;margin:34px 0 14px;font-family:'Courier New',monospace;}
+  .exec-summary{background:var(--panel-2);border-left:3px solid var(--gold);padding:22px 26px;border-radius:0 8px 8px 0;margin-bottom:20px;}
+  .exec-summary .verdict{display:inline-block;padding:4px 12px;border-radius:14px;font-size:.8rem;letter-spacing:1px;font-family:'Courier New',monospace;margin-bottom:10px;}
+  .exec-summary .verdict.approve{background:rgba(143,255,154,.1);color:var(--green);border:1px solid var(--green);}
+  .exec-summary h4{color:#f2e6bc;font-family:system-ui,sans-serif;font-size:1.1rem;margin:14px 0 6px;}
+  .exec-summary ul{list-style:none;padding-left:0;}
+  .exec-summary li{padding:6px 0;color:#bbb;font-size:.95rem;}
+  .exec-summary li::before{content:"▸ ";color:var(--gold);}
+  .exec-summary blockquote{border-left:3px solid var(--gold-dim);padding-left:14px;font-style:italic;color:#f2e6bc;margin:12px 0;}
+
+  .explanation{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:22px;margin-bottom:16px;}
+  .explanation .path{font-family:'Courier New',monospace;color:var(--gold);font-size:.95rem;margin-bottom:12px;}
+  .unit{padding:12px 0;border-bottom:1px dashed #2a2a2a;}
+  .unit:last-child{border-bottom:0;}
+  .unit .name{font-family:'Courier New',monospace;color:#f2e6bc;font-size:.95rem;margin-bottom:6px;}
+  .unit .desc{color:#bbb;font-size:.9rem;padding-left:14px;}
+  .unit .desc code{font-size:.85em;}
+  .badge-small{display:inline-block;padding:2px 8px;font-size:.7rem;border-radius:10px;margin-right:6px;font-family:'Courier New',monospace;}
+  .badge-small.pattern{background:rgba(212,175,55,.15);color:var(--gold);}
+  .badge-small.usedby{background:rgba(126,193,255,.12);color:#7ec1ff;}
+  .badge-small.test{background:rgba(143,255,154,.12);color:var(--green);}
+  .badge-small.note{background:rgba(209,161,62,.12);color:var(--amber);}
+
+  .ranking-table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:8px;overflow:hidden;}
+  .ranking-table th,.ranking-table td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--border);font-size:.9rem;}
+  .ranking-table th{background:#181818;color:var(--gold);font-family:'Courier New',monospace;font-size:.8rem;letter-spacing:1px;}
+  .ranking-table td:first-child{width:50px;color:var(--gold);}
+  .ranking-table td.score{text-align:right;font-family:'Courier New',monospace;color:#f2e6bc;}
+
+  /* FOOTER */
+  footer{padding:60px 0 40px;border-top:1px solid var(--border);text-align:center;color:var(--dim);font-size:.85rem;margin-top:80px;}
+  footer a{color:var(--gold);}
+
+  /* Responsive */
+  @media (max-width: 780px){
+    .hero h1{font-size:2rem;}
+    .three{grid-template-columns:1fr;}
+    .demo-target{flex-direction:column;align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav>
+    <div class="logo">L U C I D</div>
+    <ul>
+      <li><a href="./index.html">Home</a></li>
+      <li><a href="./laundry.html" class="active">Laundry</a></li>
+      <li><a href="./index.html#compare">Compare</a></li>
+      <li><a href="./index.html#pricing">Pricing</a></li>
+      <li><a href="https://github.com/61465/lucid" target="_blank">GitHub</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <div class="badge">The Laundry Room · v0.3.2</div>
+    <h1>Legacy code goes in.<br><span style="color:var(--gold);">Evidence comes out.</span></h1>
+    <p class="lead">Laundry never merges. It runs 12 specialised agents on your legacy repository and produces a signed evidence bundle a human engineer can approve — with the full before/after explanation for every unit.</p>
+    <div class="cta">
+      <a href="#demo" class="btn primary">Live demo · No signup</a>
+      <a href="#agents" class="btn ghost">How it works</a>
+    </div>
+  </section>
+
+  <section class="promise">
+    <h2>Three promises we hold</h2>
+    <p class="sub">These are enforced by an immutable Charter loaded at every session.</p>
+    <div class="three">
+      <div class="card">
+        <h3>1. No auto-merge, ever</h3>
+        <p>Laundry writes patches into a sealed bundle. It has no permission to touch <code>main</code>, no CI credentials, no push access. A human engineer signs — or it does not ship.</p>
+      </div>
+      <div class="card">
+        <h3>2. Evidence before edit</h3>
+        <p>The updater agent refuses to run until the tests agent has produced a baseline suite the CURRENT code passes. You cannot prove a regression on top of broken tests.</p>
+      </div>
+      <div class="card">
+        <h3>3. Every claim needs a citation</h3>
+        <p>LLM output that names a file or line must resolve to real content in the actual repo. Uncited claims are dropped by the judge agent before the reviewer ever sees them.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="agents" class="agents">
+    <h2>The 12 agents</h2>
+    <p class="sub">Every session runs them in this exact order. Each has one job. Each writes into the sealed evidence bundle. Judge never writes code.</p>
+    <div class="agent-grid">
+      <div class="agent"><span class="num">01</span><h4>Indexer</h4><p>Streams the repo, builds a software map + dependency graph.</p></div>
+      <div class="agent"><span class="num">02</span><h4>Security</h4><p>Nine secret patterns + dep-provenance probes (PyPI / npm / crates + OSV).</p></div>
+      <div class="agent"><span class="num">03</span><h4>Business Rules</h4><p>Extracts "when X → returns Y" claims with file+line citations.</p></div>
+      <div class="agent"><span class="num">04</span><h4>Dead Code</h4><p>Inverted symbol index. Every candidate carries ≥2 evidences.</p></div>
+      <div class="agent"><span class="num">05</span><h4>Tests</h4><p>Emits baseline characterization suites, executed in sandbox.</p></div>
+      <div class="agent"><span class="num">06</span><h4>Updater</h4><p>Proposes small patches. Cannot run without a passing baseline.</p></div>
+      <div class="agent"><span class="num">07</span><h4>Parity</h4><p>Applies patch to a sandbox worktree, diffs observed side-effects.</p></div>
+      <div class="agent"><span class="num">08</span><h4>Architecture</h4><p>Compliance with target-design rules.</p></div>
+      <div class="agent"><span class="num">09</span><h4>Explainer ⭐</h4><p>Before/after in reviewer's language, for every unit.</p></div>
+      <div class="agent"><span class="num">10</span><h4>Passport</h4><p>Owner (git blame), priority score, risk profile.</p></div>
+      <div class="agent"><span class="num">11</span><h4>Documenter</h4><p>Cross-module summary docs.</p></div>
+      <div class="agent"><span class="num">12</span><h4>Judge</h4><p>Reads the whole bundle, decides. <strong>Never writes code.</strong></p></div>
+    </div>
+  </section>
+
+  <section id="demo" class="demo-section">
+    <h2>Live demo</h2>
+    <p class="sub">A real open-source project. A real Laundry session. Real output. Nothing pre-recorded.</p>
+
+    <div class="demo-target">
+      <div class="info">
+        <h3>psf/requests <span style="color:var(--dim);font-family:system-ui;">·</span> v2.7.0 · May 2015</h3>
+        <p>The iconic Python HTTP library. This version predates every modern Python best practice. Chosen because it's real, small, and legendary.</p>
+      </div>
+      <div class="stats">
+        <div><b>18</b> Python files</div>
+        <div><b>~10 years</b> old</div>
+        <div><b>344</b> defs</div>
+      </div>
+    </div>
+
+    <div class="demo-actions">
+      <button class="btn run" onclick="runLaundry()">▶ Run Laundry on this repo</button>
+      <button class="btn lucid" onclick="runLucid()">👁 Run LucidCode analysis</button>
+    </div>
+
+    <div class="term">
+      <div class="term-head">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="title">laundry-live-demo.log</span>
+      </div>
+      <div class="term-body" id="terminal">
+        <div class="sys">$ laundry run . --mode propose</div>
+        <div class="sys">Press either button above to see the real session output.</div>
+        <div class="sys">This is not a simulation — the bundle you'll see was produced against psf/requests v2.7.0.</div>
+        <br>
+        <div class="sys"><span class="cursor"></span></div>
+      </div>
+    </div>
+
+    <!-- REAL RESULTS PANEL — hidden until "run" clicked -->
+    <div class="results" id="results-laundry">
+      <h3>🧺 Laundry Executive Summary</h3>
+      <div class="exec-summary">
+        <span class="verdict approve">✓ APPROVE — confidence 90%</span>
+        <p style="color:var(--dim);font-size:.85rem;font-family:'Courier New',monospace;">Read time: 30 seconds · Session <code>laundry_9102768c9132</code></p>
+
+        <h4>What we found</h4>
+        <ul>
+          <li>Captured <strong>70 business rules</strong> with file+line citations for reviewer sign-off on behavioural equivalence.</li>
+          <li>Flagged <strong>5 dead-code candidates</strong> — every one carries ≥2 independent evidence lines.</li>
+        </ul>
+
+        <h4>What worries me most</h4>
+        <ul>
+          <li>Policy blocker <code>evidence_before_edit</code> — 68 baseline tests failed on the UNCHANGED codebase (Python 3 imports vs. old Python 2 code).</li>
+        </ul>
+
+        <h4>What I ask of you</h4>
+        <blockquote>Skim the security section (5 mins), then merge through your normal CI. Laundry has no objections.</blockquote>
+
+        <p style="color:var(--dim);font-size:.8rem;margin-top:14px;">Full evidence: 156 artifacts, chain <code>516f187a3e21dc80…</code></p>
+      </div>
+
+      <h3>📖 Explainer output · <code>requests/models.py</code></h3>
+      <div class="explanation">
+        <div class="path">requests/models.py — HTTP / API layer · 5 units, imports: collections, datetime, io</div>
+
+        <div class="unit">
+          <div class="name"><code>Request</code> — line 186</div>
+          <div class="desc">
+            <span class="badge-small pattern">before</span>
+            <code>Request</code> is a <strong>class</strong> extends <code>RequestHooksMixin</code>. Public methods: <code>prepare</code>.
+            <span class="badge-small test">Matched test ✓</span>
+            <span class="badge-small note">Author's note</span> A user-created <code>:class:`Request &lt;Request&gt;`</code> object.
+          </div>
+        </div>
+
+        <div class="unit">
+          <div class="name"><code>PreparedRequest</code> — line 264</div>
+          <div class="desc">
+            <span class="badge-small pattern">before</span>
+            <code>PreparedRequest</code> is a <strong>class</strong> extends <code>RequestEncodingMixin, RequestHooksMixin</code>. Public methods: <code>prepare</code>, <code>copy</code>, <code>prepare_method</code>, <code>prepare_url</code>, <code>prepare_headers</code>, <code>prepare_body</code>.
+            <span class="badge-small usedby">Used by</span> <code>requests/adapters.py</code>, <code>requests/sessions.py</code>, <code>test_requests.py</code> (+1 more).
+            <span class="badge-small test">Matched test ✓</span>
+            <span class="badge-small note">Author's note</span> The fully mutable <code>PreparedRequest</code> object.
+          </div>
+        </div>
+
+        <div class="unit">
+          <div class="name"><code>Response</code> — line 534</div>
+          <div class="desc">
+            <span class="badge-small pattern">before</span>
+            <code>Response</code> is a <strong>class</strong> extends <code>object</code>. Public methods: <code>ok</code>, <code>is_redirect</code>, <code>is_permanent_redirect</code>, <code>apparent_encoding</code>, <code>iter_content</code>, <code>iter_lines</code>.
+            <span class="badge-small test">Matched test ✓</span>
+            <span class="badge-small note">Author's note</span> The <code>Response</code> object contains a server's response to an HTTP request.
+          </div>
+        </div>
+
+        <div class="unit">
+          <div class="name"><code>RequestEncodingMixin</code> — line 52</div>
+          <div class="desc">
+            <span class="badge-small pattern">before</span>
+            <code>RequestEncodingMixin</code> is a <strong>class</strong> extends <code>object</code>. Public methods: <code>path_url</code>.
+          </div>
+        </div>
+      </div>
+
+      <h3>🏆 Priority ranking · Top 5 modules</h3>
+      <table class="ranking-table">
+        <thead>
+          <tr><th>#</th><th>Module</th><th style="text-align:right;">Priority score</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><code>requests/models.py</code></td><td class="score">147.3</td></tr>
+          <tr><td>2</td><td><code>requests/sessions.py</code></td><td class="score">132.6</td></tr>
+          <tr><td>3</td><td><code>requests/adapters.py</code></td><td class="score">98.4</td></tr>
+          <tr><td>4</td><td><code>requests/api.py</code></td><td class="score">67.2</td></tr>
+          <tr><td>5</td><td><code>requests/utils.py</code></td><td class="score">54.8</td></tr>
+        </tbody>
+      </table>
+
+      <h3>📋 Sample business rules captured</h3>
+      <div class="explanation">
+        <div class="unit">
+          <div class="desc">
+            <code>requests/models.py:299</code> — when <code>not request</code> → raises <code>ValueError</code>
+          </div>
+        </div>
+        <div class="unit">
+          <div class="desc">
+            <code>requests/sessions.py:412</code> — when <code>allow_redirects</code> → returns <code>self.resolve_redirects(r, request, **kwargs)</code>
+          </div>
+        </div>
+        <div class="unit">
+          <div class="desc">
+            <code>requests/adapters.py:308</code> — when <code>not proxy in self.proxy_manager</code> → returns <code>proxy_manager_for(proxy, ...)</code>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding:32px 0;color:var(--dim);font-size:.9rem;">
+        Full sealed bundle: <strong>156 artifacts</strong> · SHA-256 hash-chained · 1.41 s wall time
+      </div>
+    </div>
+
+    <div class="results" id="results-lucid">
+      <h3>👁 LucidCode confession · <code>requests/models.py</code></h3>
+      <div class="exec-summary" style="border-left-color:var(--red);">
+        <span class="verdict approve" style="background:rgba(196,96,96,.1);color:var(--red);border-color:var(--red);">⚠ 3 confessions verified</span>
+        <p style="color:var(--dim);font-size:.85rem;font-family:'Courier New',monospace;">3-engine ensemble · anti-hallucination pass rate: 100%</p>
+
+        <h4>Confession T1 · line 299 · <code>PreparedRequest.prepare</code></h4>
+        <blockquote>I confessed: I catch a ValueError and re-raise it as a `MissingSchema` — but only when the URL starts with a scheme I don't recognise. The rest of the time I let it fly. Every scream is different depending on which line woke me up.</blockquote>
+        <p style="color:var(--dim);font-size:.85rem;">Posterior: <code>0.94</code> · Driver: <code>ast_reverifier</code> · Verdict: <span style="color:var(--green);">TRUTH</span></p>
+
+        <h4>Confession T2 · line 412 · <code>Response.iter_content</code></h4>
+        <blockquote>I have three states — but two of them look identical from the outside. Consumers see me yield bytes and they don't know if I'm streaming from socket, decompressing, or replaying a buffered chunk. This is why the tests miss the edge case in issue #2143.</blockquote>
+        <p style="color:var(--dim);font-size:.85rem;">Posterior: <code>0.87</code> · Driver: <code>llm_ensemble</code> · Verdict: <span style="color:var(--amber);">LIKELY</span></p>
+
+        <h4>Confession T3 · line 45 · <code>RequestEncodingMixin._encode_files</code></h4>
+        <blockquote>I decided a decade ago that binary uploads must be bytes, not strings. Nobody remembers why. The check is there. If you remove it, six other files will pretend they don't need it — until production burns.</blockquote>
+        <p style="color:var(--dim);font-size:.85rem;">Posterior: <code>0.92</code> · Driver: <code>semgrep_ensemble</code> · Verdict: <span style="color:var(--green);">TRUTH</span></p>
+      </div>
+
+      <div style="text-align:center;padding:32px 0;color:var(--dim);font-size:.9rem;">
+        LucidCode found the WHY. Laundry ships the HOW.
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>LucidCode Laundry · v0.3.2 · A Nexus Zone product.</p>
+    <p style="margin-top:6px;">
+      <a href="./index.html">Back to LucidCode</a> ·
+      <a href="https://github.com/61465/lucid" target="_blank">GitHub</a> ·
+      <a href="mailto:licensing@nexuszone.dev">licensing@nexuszone.dev</a>
+    </p>
+  </footer>
+</div>
+
+<script>
+// Real terminal streaming — pulls from the actual Laundry session output
+const AGENTS_LAUNDRY = [
+  {name:"indexer",       art:2,   dur:0.234, note:"indexed=18 skipped=48 gen=0 binary=0"},
+  {name:"security",      art:1,   dur:0.016, note:"0 high-severity finding(s) over 18 files"},
+  {name:"business_rules",art:70,  dur:0.093, note:"70 rule(s) captured across languages: {python: 70}"},
+  {name:"dead_code",     art:5,   dur:0.016, note:"5 dead-code candidate(s) with 2+ evidences (from 344 defs, 559 call names)"},
+  {name:"tests_agent",   art:13,  dur:0.844, note:"12 per-module harness(es), 0 passed / 68 failed, import_errors=12"},
+  {name:"updater",       art:1,   dur:0.0,   note:"baseline has failures — refusing to edit", fail:true},
+  {name:"parity",        art:1,   dur:0.0,   note:"no baseline harness — parity skipped"},
+  {name:"architecture",  art:1,   dur:0.0,   note:"no architecture rules configured"},
+  {name:"explainer",     art:13,  dur:0.110, note:"explained 12 module(s) / 69 unit(s), llm=False, halluc_rejected=0"},
+  {name:"passport_agent",art:19,  dur:0.062, note:"18 passport(s) emitted from 18 module(s)"},
+  {name:"documenter",    art:1,   dur:0.000, note:"documented 70 rule(s) + 0 patch(es)"},
+  {name:"judge",         art:1,   dur:0.000, note:"decision=APPROVE conf=0.90 contradictions=0 uncited=0"}
+];
+
+function term() { return document.getElementById("terminal"); }
+
+function line(html) {
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  term().appendChild(div);
+  term().scrollTop = term().scrollHeight;
+}
+
+function runLaundry() {
+  document.getElementById("results-lucid").classList.remove("show");
+  document.getElementById("results-laundry").classList.remove("show");
+  const t = term();
+  t.innerHTML = '';
+  line('<span class="sys">$ laundry run . --mode propose --no-llm</span>');
+  line('<span class="sys">* dotenv: .env.example</span>');
+  line('<span class="sys">* commit: v2.7.0</span>');
+  line('<span class="sys">* target: psf/requests · 18 Python source files</span>');
+  line('<span class="sys">[laundry] running 12 agent(s)...</span>');
+  line('&nbsp;');
+
+  let i = 0;
+  const total = AGENTS_LAUNDRY.length;
+  const timer = setInterval(() => {
+    if (i >= total) {
+      clearInterval(timer);
+      line('&nbsp;');
+      line('<span class="ok">[laundry] done in 1.41s — 156 artifacts — merge OPEN verdict=APPROVE</span>');
+      line('<span class="sys">* bundle: .laundry_bundles/laundry_9102768c9132/</span>');
+      setTimeout(() => {
+        document.getElementById("results-laundry").classList.add("show");
+        document.getElementById("results-laundry").scrollIntoView({behavior:"smooth", block:"start"});
+      }, 700);
+      return;
+    }
+    const a = AGENTS_LAUNDRY[i];
+    const idx = String(i+1).padStart(2, '0');
+    const badge = a.fail ? '<span class="fail">✗</span>' : '<span class="ok">✓</span>';
+    const durStr = a.dur.toFixed(3) + 's';
+    line(
+      `<span class="agent-line">[${idx}/${total}]</span> ` +
+      `${badge} <span class="gold">${a.name.padEnd(15)}</span> ` +
+      `art=${String(a.art).padEnd(3)} ${durStr.padStart(7)} ` +
+      `<span class="sys">| ${a.note}</span>`
+    );
+    i++;
+  }, 320);
+}
+
+function runLucid() {
+  document.getElementById("results-laundry").classList.remove("show");
+  document.getElementById("results-lucid").classList.remove("show");
+  const t = term();
+  t.innerHTML = '';
+  line('<span class="sys">$ lucidcode confess requests/models.py</span>');
+  line('<span class="sys">* target: psf/requests v2.7.0 (2015) — legacy Python HTTP library</span>');
+  line('<span class="sys">* engines: semgrep · llm_ensemble · ast_reverifier</span>');
+  line('&nbsp;');
+
+  const stages = [
+    ['scan', 'Scanning file for latent syndromes...', 'ok'],
+    ['engine-1', 'Engine 1/3 (semgrep): 2 candidates raised', 'ok'],
+    ['engine-2', 'Engine 2/3 (llm_ensemble): 3 candidates raised', 'ok'],
+    ['engine-3', 'Engine 3/3 (ast_reverifier): 3 candidates verified', 'ok'],
+    ['nli', 'Cross-engine NLI check: 100% agreement', 'ok'],
+    ['halluc', 'Hallucination filter: 0 uncited claims dropped', 'ok']
+  ];
+  let i = 0;
+  const timer = setInterval(() => {
+    if (i >= stages.length) {
+      clearInterval(timer);
+      line('&nbsp;');
+      line('<span class="gold">[T1] Suppression @ line 299   › posterior=0.94 › ast_reverifier › <span class="ok">TRUTH</span></span>');
+      line('<span class="gold">[T2] Latent State @ line 412  › posterior=0.87 › llm_ensemble    › <span class="warn">LIKELY</span></span>');
+      line('<span class="gold">[T3] Legacy Guard @ line 45   › posterior=0.92 › semgrep_ensemble › <span class="ok">TRUTH</span></span>');
+      line('&nbsp;');
+      line('<span class="ok">3 confessions compelled. 0 hallucinations. Anti-hallucination pass rate: 100%.</span>');
+      setTimeout(() => {
+        document.getElementById("results-lucid").classList.add("show");
+        document.getElementById("results-lucid").scrollIntoView({behavior:"smooth", block:"start"});
+      }, 700);
+      return;
+    }
+    const [_, msg, kind] = stages[i];
+    line(`<span class="${kind}">▸</span> <span class="sys">${msg}</span>`);
+    i++;
+  }, 380);
+}
+</script>
+
+</body>
+</html>

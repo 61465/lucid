@@ -1,0 +1,6 @@
+{
+  "claim": "when `not cert_loc` -> raises `Exception`",
+  "file": "requests/adapters.py",
+  "function": "cert_verify",
+  "line": 180
+}

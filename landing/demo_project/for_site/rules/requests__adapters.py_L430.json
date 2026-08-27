@@ -1,0 +1,6 @@
+{
+  "claim": "when `isinstance(e, _SSLError)` -> raises `SSLError`",
+  "file": "requests/adapters.py",
+  "function": "send",
+  "line": 430
+}
