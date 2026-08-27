@@ -46,18 +46,14 @@ Full survey of adjacent work in [`docs/PRIOR_ART.md`](docs/PRIOR_ART.md).
 
 ---
 
-## Install
+## Access
 
-```bash
-pip install click
-git clone https://github.com/61465/lucid
-cd lucid
-python -m lucidcode.cli syndromes    # list registered syndromes
-```
+LucidCode and Laundry are available by direct engagement — every deployment is
+scoped to your codebase, security posture, and review flow.
 
-Requires Python 3.10+.
-Docker is optional (auto-detected). Without it, LucidCode falls back to
-`subprocess -I` sandboxing.
+**To request the service, contact:** `abdarahman10555@gmail.com`
+
+Response within one business day.
 
 ---
 
