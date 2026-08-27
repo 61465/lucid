@@ -1,5 +1,7 @@
 # LucidCode + Laundry
 
+**Founded by `game_nexus_zone`**
+
 > **LucidCode compels the truth. Laundry ships the change.**
 
 Two tools, one Charter. LucidCode makes legacy code confess its latent bugs.
